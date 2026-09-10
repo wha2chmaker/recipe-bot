@@ -1085,25 +1085,11 @@ def health():
     return "Bot is running"
 
 def run_bot():
+    import asyncio
+    asyncio.set_event_loop(asyncio.new_event_loop())
     _require_env()
     _init_db()
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("help", help_command))
-    application.add_handler(CommandHandler("favorites", favorites_command))
-    application.add_handler(
-        MessageHandler(filters.TEXT & ~filters.COMMAND, handle_ingredients)
-    )
-    application.add_handler(
-        CallbackQueryHandler(show_more, pattern=rf"^{SHOW_MORE_CALLBACK}$")
-    )
-    application.add_handler(
-        CallbackQueryHandler(
-            save_favorite, pattern=rf"^{SAVE_CALLBACK_PREFIX}\d+$"
-        )
-    )
-    logger.info("Bot started")
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 def main() -> None:
     threading.Thread(target=run_bot, daemon=True).start()
