@@ -4,6 +4,9 @@ import os
 import re
 from typing import Any
 
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
+
 import requests
 from deep_translator import GoogleTranslator
 from dotenv import load_dotenv
@@ -736,8 +739,30 @@ async def handle_ingredients(update: Update, context: ContextTypes.DEFAULT_TYPE)
             await update.message.reply_text(caption, parse_mode=ParseMode.HTML)
 
 
+class HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(b"Bot is running")
+
+    def log_message(self, format, *args):
+        pass  # отключаем логи, чтобы не засорять консоль
+
+
+def run_health_server():
+    port = int(os.environ.get("PORT", 8080))
+    server = HTTPServer(("0.0.0.0", port), HealthHandler)
+    server.serve_forever()
+
+
 def main() -> None:
     _require_env()
+
+    # Фоновый HTTP-сервер: чтобы Render видел открытый порт
+    threading.Thread(target=run_health_server, daemon=True).start()
+
+    # Бот — в главном потоке
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(
@@ -745,6 +770,10 @@ def main() -> None:
     )
     logger.info("Bot started")
     application.run_polling(allowed_updates=Update.ALL_TYPES)
+
+
+if __name__ == "__main__":
+    main()
 
 
 if __name__ == "__main__":
